@@ -1,0 +1,101 @@
+import re
+
+class ManualReviewBot:
+    def __init__(self):
+        self.rules = {
+            "bullet_points": self.check_bullet_points,
+            "full_stops": self.check_full_stops,
+            "paragraphing": self.check_paragraphing,
+            "wording": self.check_wording,
+            "capitalisation": self.check_capitalisation,
+            "spelling": self.check_spelling,
+            "commas": self.check_commas,
+            "replace_doctor": self.check_doctor_replacement
+        }
+
+    def add_rule(self, rule_name, rule_function):
+        self.rules[rule_name] = rule_function
+
+    def review(self, text):
+        feedback = {}
+        for rule_name, rule_func in self.rules.items():
+            feedback[rule_name] = rule_func(text)
+        return feedback
+
+    def check_bullet_points(self, text):
+        issues = []
+        lines = text.split('\n')
+        for i, line in enumerate(lines):
+            if line.strip().startswith("-") and not line.strip().startswith("- "):
+                issues.append(f"Line {i+1}: Bullet point should have a space after dash.")
+        return issues or ["No bullet point issues found."]
+
+    def check_full_stops(self, text):
+        issues = []
+        lines = text.split('\n')
+        for i, line in enumerate(lines):
+            if line and not line.strip().endswith(('.', ':', '!', '?')) and not line.strip().startswith("-"):
+                issues.append(f"Line {i+1}: Missing full stop at the end of the sentence.")
+        return issues or ["All sentences end correctly."]
+
+    def check_paragraphing(self, text):
+        paragraphs = text.split('\n\n')
+        if len(paragraphs) < 2:
+            return ["Consider breaking content into more paragraphs for readability."]
+        return ["Paragraph structure looks good."]
+
+    def check_wording(self, text):
+        informal_words = ['stuff', 'things', 'nice', 'okay']
+        issues = []
+        for word in informal_words:
+            if word in text.lower():
+                issues.append(f"Avoid using informal word: '{word}'.")
+        return issues or ["No informal wording found."]
+
+    def check_capitalisation(self, text):
+        issues = []
+        sentences = re.split(r'[.!?]\s+', text)
+        for i, sentence in enumerate(sentences):
+            if sentence and not sentence[0].isupper():
+                issues.append(f"Sentence {i+1}: Should start with a capital letter.")
+        return issues or ["Capitalisation looks good."]
+
+    def check_spelling(self, text):
+        common_misspellings = {'recieve': 'receive', 'definately': 'definitely', 'teh': 'the', 'adress': 'address'}
+        issues = []
+        for wrong, correct in common_misspellings.items():
+            if wrong in text:
+                issues.append(f"Spelling error: '{wrong}' should be '{correct}'.")
+        return issues or ["No spelling issues found."]
+
+    def check_commas(self, text):
+        issues = []
+        sentences = re.split(r'(?<=[a-zA-Z]),(?=[a-zA-Z])', text)
+        if len(sentences) > 1:
+            for i in range(len(sentences) - 1):
+                issues.append(f"Possible missing space after comma in: '{sentences[i][-10:]}...'")
+        return issues or ["No comma issues found."]
+
+    def check_doctor_replacement(self, text):
+        issues = []
+        if 'Doctor' in text:
+            issues.append("Replace 'Doctor' with 'Practice'.")
+        return issues or ["No 'Doctor' found that needs replacing."]
+
+# Example usage:
+bot = ManualReviewBot()
+
+sample_text = """
+-This is a sample bullet point
+this is a sentence without full stop
+The Doctor is in the room.
+There are too many things here.
+
+Here is a proper paragraph.
+"""
+
+feedback = bot.review(sample_text)
+for rule, result in feedback.items():
+    print(f"\n{rule.title()} Feedback:")
+    for msg in result:
+        print(f"- {msg}")
